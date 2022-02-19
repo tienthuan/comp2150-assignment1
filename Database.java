@@ -1,27 +1,32 @@
 public class Database {
     //could use hashtable instead?
     //arraylist used here is a custom one, not one from java lib
-    private ArrayList<Tutor> tutorArr = new ArrayList<Tutor>();
-    private ArrayList<Student> studentArr = new ArrayList<Student>();
-    private Boolean quitFlag = false;
+    private ArrayList<Tutor> tutorArr;
+    private ArrayList<Student> studentArr;
+    private Boolean quitFlag;
 
+    public Database(){
+        tutorArr = new ArrayList<Tutor>();
+        studentArr = new ArrayList<Student>();
+        quitFlag = false;
+    }
     private String addTutor(String userid, String hoursString){
         int hoursInt = Integer.parseInt(hoursString);
         Tutor tutor = new Tutor(userid,hoursInt);
         for(int i = 0; i < tutorArr.size(); i ++){
-            if(tutorArr.get(i).getUserID().equals(userid)) return "DUPLICATE";
+            if(tutorArr.get(i).getUserID().equals(userid)) return String.format("%s has a duplicate",userid);
         }
         tutorArr.add(tutor);
-        return "CONFIRMED";
+        return String.format("%s has been added",userid);
     }
 
     private String addStudent(String userid){
         for(int i = 0; i < studentArr.size(); i ++){
-            if(studentArr.get(i).getUserID().equals(userid)) return "DUPLICATE";
+            if(studentArr.get(i).getUserID().equals(userid)) return String.format("%s has a duplicate",userid);
         }
         Student student = new Student(userid);
         studentArr.add(student);
-        return "CONFIRMED";
+        return String.format("%s has been added",userid);
     }
 
     private String addTopic(String topicName,String userid,String priceString){
@@ -33,52 +38,76 @@ public class Database {
         for(int i = 0; i < tutorArr.size(); i++){
             String ID = tutorArr.get(i).getUserID();
                 if(ID.equals(userid)){
-                    if(tutorArr.get(i).getTopic().equals(topicName)) return "DUPLICATE";
+                    if(tutorArr.get(i).getTopic().equals(topicName)) return String.format("topic %s for %s has a duplicate",topicName,userid);
                     else tutorArr.get(i).setTopic(topicName, price);;
-                    return "CONFIRMED";
+                    return String.format("registered %s for tutor %s",topicName,userid);
                 }
         }
-        return "NOT FOUND";
+        return String.format("%s was not found",userid);
     }
-
+    private int getTotalHoursRemaining(){
+        int output = 0;
+        for(int i = 0; i < tutorArr.size(); i ++){
+            output+=tutorArr.get(i).getRemaining();
+        }
+        return output;
+    }
+    private int getTutor(String ID){
+        for(int i = 0; i < tutorArr.size(); i ++){
+            if(tutorArr.get(i).getUserID().compareTo(ID) == 0){
+                return i;
+            }
+        }
+        return -1;
+    }
     private void setAppointment(String studentID,int studentInt, String tutorID,int tutorInt, String topic,int money,int time){
-        studentArr.get(studentInt).setAppointment(tutorID, topic, time, money);
+        studentArr.get(studentInt).setAppointment(tutorID,topic, time, money);
         tutorArr.get(tutorInt).setAppointment(studentID,topic,time,money);
     }
 
-    private String findTutor(int studentInt, String topic, int hours){//studentInt is the student's place in the student arraylist
-            for(int i = 0; i < tutorArr.size(); i++){
-                    int remaining = tutorArr.get(i).getRemaining();
-                    if(tutorArr.get(i).getTopic().equals(topic) & remaining > 0){
-                        if(remaining >= hours){
-                            setAppointment(studentArr.get(studentInt).getUserID(), studentInt, tutorArr.get(i).getUserID(), i, topic, hours, tutorArr.get(i).getTopicPrice());
-                            tutorArr.get(i).setRemaining(remaining - hours);
-                            hours = 0;
+    private String findTutor(int studentInt, String topic, int hours,ArrayList<Tutor> tutorArrSorted){//studentInt is the student's place in the student arraylist
+        int remaining;
+        String tutorID;
+        int topicPrice;
+        int tutorPosInOriginalArr;
+        for(int i = 0; i < tutorArrSorted.size(); i++){
+                    remaining = tutorArrSorted.get(i).getRemaining();
+                    if((tutorArrSorted.get(i).getTopic().equals(topic) & remaining > 0) && hours > 0){
+                        tutorID = tutorArrSorted.get(i).getUserID();
+                        topicPrice = tutorArrSorted.get(i).getTopicPrice();
+                        tutorPosInOriginalArr = getTutor(tutorID);
+                        if(remaining >= hours){                          
+                            setAppointment(studentArr.get(studentInt).getUserID(), studentInt,tutorID, tutorPosInOriginalArr, topic, topicPrice, hours);
+                            tutorArr.get(tutorPosInOriginalArr).setRemaining(remaining - hours);
+                            hours = 0;                            
                         }
                         else{
-                            setAppointment(studentArr.get(studentInt).getUserID(), studentInt, tutorArr.get(i).getUserID(), i, topic, remaining, tutorArr.get(i).getTopicPrice());
-                            hours -= tutorArr.get(i).getRemaining();
-                            tutorArr.get(i).setRemaining(0);
+                            setAppointment(studentArr.get(studentInt).getUserID(), studentInt, tutorID, tutorPosInOriginalArr, topic, topicPrice, remaining);
+                            hours -= tutorArrSorted.get(i).getRemaining();
+                            tutorArr.get(tutorPosInOriginalArr).setRemaining(0);
                         }
                     }
-            }
-        if(hours == 0){
-            return "SUCCESS";
         }
-        else return "FAIL";
+        return String.format("succesfully found tutors for %s, list of tutors will be in the report",studentArr.get(studentInt).getUserID());
     }
 
     private String request(String studentID,String topicName,String hoursString){
         topicName = topicName.strip();
         int hours = Integer.parseInt(hoursString);
         studentID = studentID.strip();
-        String output = "NOT FOUND";
+        String output =  String.format("Student %s was not found in the database",studentID);
+        int totalRemainingHours = getTotalHoursRemaining();
+        if(totalRemainingHours < hours || hours <= 0){
+            return  String.format("Failed to find tutors for student %s in subject %s for %s hours",studentID,topicName,hours);
+        }
         //loop through student arr
         for(int i = 0; i < studentArr.size(); i++){
             //if student is found
             if(studentArr.get(i).getUserID().equals(studentID)){
                 //find suitable tutor
-                output = findTutor(i,topicName,hours);
+                ArrayList<Tutor> tutorArrCopy = tutorArr.copy();
+                tutorArrCopy.PriceSort(tutorArrCopy);
+                output = findTutor(i,topicName,hours,tutorArrCopy);
             }
         }
         return output; 
@@ -88,7 +117,7 @@ public class Database {
         String output = "";
         int totalHoursPerPerson = 0;
         int totalMoneyPerPerson = 0;
-        output += "_______________________";
+        output += "_______________________\n";
         for(int i = 0; i < arr.size(); i++){
             String person = arr.get(i).getpersonID();
             String topic = arr.get(i).getTopic();
@@ -102,7 +131,7 @@ public class Database {
             else
                 output += String.format("Appointment:Student %s,topic: %s,hours: %d,total revenue: %d \n",person,topic,hours,totalMoneyPerTopic);
         }
-        output += "________________________";
+        output += "________________________\n";
         output += "Total number of hours of tutoring: " + String.valueOf(totalHoursPerPerson) + "\n";
         output += "Total cost of tutoring: " + String.valueOf(totalMoneyPerPerson) + "\n";
         return output;
@@ -123,7 +152,7 @@ public class Database {
 
     private String tutorReport(String userID){
         String output = String.format("Report for Tutor %s",userID) + "\n";
-        for(int i = 0; i < studentArr.size(); i++){
+        for(int i = 0; i < tutorArr.size(); i++){
             if(tutorArr.get(i).getUserID().equals(userID)){
                 ArrayList<Appointment> tutorAppointments = tutorArr.get(i).getAppointments();
                 String tutorAppointmentReport = printAppointments(tutorAppointments, false);
@@ -143,42 +172,54 @@ public class Database {
         return "BYE";
     }
     
-    public void input(String input){
+    private String reInitialize(){
+        quitFlag = false;
+        return "HI AGAIN";
+    }
+    public String input(String input){
         //check if comment
-        if(input.charAt(0) == '#')
-            return;
-        String[] split = input.split(" ");
+        if(!input.matches(".*\\w.*"))
+            return "input not found";
+        if(input.charAt(0) == '#' || quitFlag == true)
+            return "";
+        String[] split = input.split("\\s+");
         String command = split[0];
         switch(command){
             case "TUTOR":
-                output(addTutor(split[1],split[2]));
-                break;
+                return output(addTutor(split[1],split[2]));
+                //break;
             case "STUDENT":
-                output(addStudent(split[1]));
-                break;
+                return output(addStudent(split[1]));
+                //break;
             case "TOPIC":
-                output(addTopic(split[1],split[2],split[3]));
-                break;
+                return output(addTopic(split[1],split[2],split[3]));
+                //break;
             case "REQUEST":
-                output(request(split[1],split[2],split[3]));
-                break;
+                return output(request(split[1],split[2],split[3]));
+                //break;
             case "STUDENTREPORT":
-                output(studentReport(split[1]));
-                break;
+                return output(studentReport(split[1]));
+                //break;
             case "TUTORREPORT":
-                output(tutorReport(split[1]));
-                break;
+                return output(tutorReport(split[1]));
+                //break;
             case "QUIT":
-                output(quit());
-                break;
+                return output(quit());
+                //break;
+            case "END":
+                return output(quit());
+                //break;
+            case "TURNON":
+                return output(reInitialize());
             default:
-                output("Sorry, command is unknown");
-                break;
+                return output("Sorry, command is unknown");
+                //break;
         }
     }
 
-    private void output(String output){
+    private String output(String output){
         System.out.println(output);
+        return output;
     }
 
 }

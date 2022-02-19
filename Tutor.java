@@ -1,4 +1,5 @@
-public class Tutor{
+
+public class Tutor {
     
     private String userID;
     private int hours;
@@ -14,6 +15,7 @@ public class Tutor{
         remaining = noOfHours;
         topic = "none";
         topicPrice = 0;
+        appointments = new ArrayList<Appointment>();
     }
 
     //getters
@@ -23,7 +25,7 @@ public class Tutor{
     public String getTopic(){
         return topic;
     }
-    public int getTopicPrice(){
+    public Integer getTopicPrice(){
         return topicPrice;
     }
     public int getHours(){
@@ -49,34 +51,5 @@ public class Tutor{
         Appointment appointment = new Appointment(tutor, subject, time, money);
         appointments.add(appointment);
     }
+    
 }
-
-//loop through student arr
-        /* for(int i = 0; i < studentArr.size(); i++){
-            //if student is found
-            if(studentArr.get(i).getID().equals(studentID)){
-                //find suitable tutor
-                for(int j = 0; j < tutorArr.size();j++){
-                    int remaining = tutorArr.get(i).getRemaining();
-                    //if tutor is correct and have remaining time
-                    if(tutorArr.get(i).getTopic().equals(topicName) & remaining > 0){
-                        
-                        if(remaining >= hours){
-                            //first enroll the student into suitable tutor then set remaining hours of tutor  
-                            studentArr.get(i).setEnrolment(topicName, Integer.parseInt(hoursString), tutorArr.get(j).getTopicPrice());
-                            tutorArr.get(i).setRemaining(remaining - hours);
-                            hours = 0;
-                        }
-                        else{
-                            //enroll the student into found tutor, hours will be > 0, tutor remaining hour will be 0 and keep finding
-                            studentArr.get(i).setEnrolment(topicName, tutorArr.get(j).getRemaining(), tutorArr.get(j).getTopicPrice());
-                            hours -= tutorArr.get(j).getRemaining();
-                            tutorArr.get(i).setRemaining(0);
-                        }
-                    }
-                }
-                if(hours > 0) return "FAIL";
-                else return "SUCCESS";
-            }
-        }
-        return "NOT FOUND"; */
